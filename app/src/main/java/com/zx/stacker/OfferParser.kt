@@ -89,6 +89,7 @@ object OfferParser {
         var type: String? = null
         var priority = 0.0
         var cardTop = 0
+        var lastFareTop: Int? = null   // row of the fare just read: a split-off "+ 1.70" must sit on the same row
         var stops = 0
 
         fun startCard(top: Int) { places.clear(); jobKm = null; pickupKm = null; type = null; priority = 0.0; stops = 0; inCard = true; cardTop = top }
@@ -97,6 +98,7 @@ object OfferParser {
             val t = cleanPlace(line.text.trim())
             if (t.isEmpty()) continue
             val low = t.lowercase()
+            if (!t.startsWith("+") && lastFareTop != null && kotlin.math.abs(line.top - lastFareTop!!) >= 25) lastFareTop = null
 
             val ph = PICKUP_HEADER.find(t)
             if (ph != null) { startCard(line.top); pickupKm = num(ph.groupValues[1]); continue }
@@ -117,14 +119,26 @@ object OfferParser {
                 if (!inCard) startCard(line.top)   // header was missed: the type tag still marks a new card
                 type = t; continue
             }
-            if (inCard && t.startsWith("+")) { BONUS.find(t)?.let { priority += num(it.groupValues[1]) ?: 0.0 }; continue }
+            if (t.startsWith("+")) {
+                // Only a "+ x.xx" on the same row as the fare is a priority fee; anything else is ignored.
+                val ft = lastFareTop
+                val b = BONUS.find(t)
+                if (ft != null && kotlin.math.abs(line.top - ft) < 25 && b != null && out.isNotEmpty()) {
+                    val lastO = out.removeAt(out.size - 1)
+                    out.add(lastO.copy(priority = lastO.priority + (num(b.groupValues[1]) ?: 0.0)))
+                }
+                lastFareTop = null
+                continue
+            }
 
             val fm = FARE.find(t)
             if (fm != null) {
                 val v = num(fm.groupValues[1]) ?: continue
                 if (low.contains("priority")) { priority = v; continue }
                 BONUS.find(t.substring(fm.range.last + 1))?.let { priority += num(it.groupValues[1]) ?: 0.0 }
+                lastFareTop = null
                 if (inCard && v in 3.0..300.0 && places.size >= 2) {
+                    lastFareTop = line.top
                     out.add(ParsedOffer(places[0], places[1], v, priority, jobKm, pickupKm, type, stops, cardTop, line.bottom))
                 }
                 places.clear(); inCard = false

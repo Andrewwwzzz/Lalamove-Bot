@@ -10,7 +10,7 @@ struct ParsedOffer: Equatable {
     let pickup: String
     let drop: String
     let fare: Double
-    let priority: Double
+    var priority: Double
     let jobKm: Double?      // Record screen "11.7 km"
     let pickupKm: Double?   // Pickup screen "(~2.7 km) Pick Up Now"
     let type: String?       // "Regular", "Pooling", ...
@@ -94,12 +94,15 @@ enum OfferParser {
         var inCard = false
         var jobKm: Double? = nil, pickupKm: Double? = nil, type: String? = nil, priority = 0.0, stops = 0
 
+        var lastFareTop: Int? = nil   // row of the fare just read: a split-off "+ 1.70" must sit on the same row
+
         func startCard() { places = []; jobKm = nil; pickupKm = nil; type = nil; priority = 0; stops = 0; inCard = true }
 
         for line in sorted {
             let t = cleanPlace(line.text.trimmingCharacters(in: .whitespaces))
             if t.isEmpty { continue }
             let low = t.lowercased()
+            if !t.hasPrefix("+"), let ft = lastFareTop, abs(line.top - ft) >= 25 { lastFareTop = nil }
 
             if let ph = match(pickupHeaderRx, t) { startCard(); pickupKm = num(ph.g1); continue }
             if has(cardStartRx, t) { if !inCard || !places.isEmpty { startCard() }; continue }
@@ -114,8 +117,12 @@ enum OfferParser {
                 if !inCard { startCard() }   // header missed: the type tag still marks a new card
                 type = t; continue
             }
-            if inCard && t.hasPrefix("+") {
-                if let b = match(bonusRx, t) { priority += num(b.g1) ?? 0 }
+            if t.hasPrefix("+") {
+                // Only a "+ x.xx" on the same row as the fare is a priority fee; anything else is ignored.
+                if let ft = lastFareTop, abs(line.top - ft) < 25, let b = match(bonusRx, t), !out.isEmpty {
+                    out[out.count - 1].priority += num(b.g1) ?? 0
+                }
+                lastFareTop = nil
                 continue
             }
             if let fm = match(fareRx, t) {
@@ -123,7 +130,9 @@ enum OfferParser {
                 if low.contains("priority") { priority = v; continue }
                 let rest = String(t[fm.whole.upperBound...])
                 if let b = match(bonusRx, rest) { priority += num(b.g1) ?? 0 }
+                lastFareTop = nil
                 if inCard && (3...300).contains(v) && places.count >= 2 {
+                    lastFareTop = line.top
                     out.append(ParsedOffer(pickup: places[0], drop: places[1],
                                            fare: v, priority: priority, jobKm: jobKm, pickupKm: pickupKm, type: type, extraStops: stops))
                 }

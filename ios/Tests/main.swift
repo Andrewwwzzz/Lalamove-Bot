@@ -26,6 +26,14 @@ check(offers.first?.extraStops == 0, "single stop detected")
 let icons = OfferParser.parse([l("(~2.4 km) Pick Up Now", 100), l("Regular", 150), l("O Kovan", 200), l("0 Punggol", 250), l("S$14.20", 320, 900)])
 check(icons.first?.pickup == "Kovan" && icons.first?.drop == "Punggol", "strips icon letter: \(icons.first.map { $0.pickup + " → " + $0.drop } ?? "none")")
 
+// "+ x.xx": counts only on the fare's row
+let split = OfferParser.parse([l("(~2.0 km) Pick Up Now", 100), l("Regular", 150), l("Kovan", 200), l("Punggol", 250),
+                               l("S$18.80", 320, 700), l("+ 1.70", 322, 900)])
+check(split.first?.priority == 1.7, "split '+ 1.70' on fare row counts")
+let stray = OfferParser.parse([l("(~2.0 km) Pick Up Now", 100), l("Regular", 150), l("Kovan", 200), l("+ 3.00", 225, 600), l("Punggol", 250),
+                               l("S$19.10", 320, 700)])
+check(stray.first?.priority == 0 && stray.first?.fare == 19.1, "stray '+ 3.00' elsewhere ignored")
+
 // Record → Ongoing
 let ongoing = [l("Ongoing", 170), l("Completed", 170, 500), l("Canceled", 170, 900), l("In Progress", 320), l("11.7 km", 440),
                l("# 3632751025968100019", 440, 700), l("Suntec City", 500, 140), l("Bedok", 580, 140), l("S$15.70", 720, 900)]
