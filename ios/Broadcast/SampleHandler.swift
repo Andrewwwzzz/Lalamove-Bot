@@ -67,7 +67,43 @@ class SampleHandler: RPBroadcastSampleHandler {
 
     // MARK: - Reading
 
+    // MARK: - Goal (read off the Offer Reader screen)
+
+    private func readGoal(_ lines: [OcrLine]) {
+        guard let g = OfferParser.goal(lines) else { return }
+        if g.place.isEmpty {
+            if defaults.string(forKey: "goalName") != nil {
+                defaults.removeObject(forKey: "goalName")
+                post(id: "goal", title: "🎯 Goal cleared", body: "Offers are scored on S$/hr only.")
+            }
+            return
+        }
+        var c = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        c.hour = g.hour; c.minute = g.minute
+        guard var by = Calendar.current.date(from: c) else { return }
+        if by < Date().addingTimeInterval(-30 * 60) { by = by.addingTimeInterval(24 * 3600) }
+        if defaults.string(forKey: "goalName") == g.place && abs(defaults.double(forKey: "goalBy") - by.timeIntervalSince1970) < 60 { return }
+        defaults.set(g.place, forKey: "goalName")
+        defaults.set(by.timeIntervalSince1970, forKey: "goalBy")
+        _ = resolve(g.place)
+        post(id: "goal", title: "🎯 Goal set: \(g.place) by \(clock(by))", body: "Offers on the way score higher; ones that would make you late are skipped.")
+    }
+
+    /// Current goal if set and not more than 30 min past.
+    private func goal() -> (name: String, loc: LatLng?, minutesLeft: Double)? {
+        guard let name = defaults.string(forKey: "goalName") else { return nil }
+        let by = Date(timeIntervalSince1970: defaults.double(forKey: "goalBy"))
+        let left = by.timeIntervalSinceNow / 60
+        if left < -30 { defaults.removeObject(forKey: "goalName"); return nil }
+        return (name, resolve(name), left)
+    }
+
+    private func clock(_ d: Date) -> String {
+        let f = DateFormatter(); f.dateFormat = "h:mm a"; return f.string(from: d)
+    }
+
     private func handle(_ lines: [OcrLine]) {
+        readGoal(lines)
         let parsed = OfferParser.parse(lines)
         if OfferParser.isRecordScreen(lines) {
             // Record screen: Ongoing cards are YOUR jobs. Never score them as offers.
@@ -77,27 +113,30 @@ class SampleHandler: RPBroadcastSampleHandler {
         }
 
         let drops = onBoard().compactMap { resolve($0.drop) }
+        let gl = goal()
         var summary: [String] = []
+        if let gl = gl { summary.append("🎯 \(gl.name) in \(Int(gl.minutesLeft)) min" + (gl.loc == nil ? " (locating…)" : "")) }
         for o in parsed.prefix(5) {
             guard let p = resolve(o.pickup), let d = resolve(o.drop) else {   // looked up in background; next frame
                 summary.append("📍 locating \(o.pickup) → \(o.drop)"); continue
             }
             let s = Scorer.score(pickup: p, drop: d, pickupKm: o.pickupKm ?? 3.0, fare: o.fare, priority: o.priority,
-                                 onBoardDrops: drops, target: target)
+                                 onBoardDrops: drops, target: target, goal: gl?.loc, minutesLeft: gl?.loc == nil ? nil : gl?.minutesLeft)
             // Your rules: single stop only, pickup within 2.5 km.
             let tooFar = (o.pickupKm ?? 99) > maxPickupKm
             let multi = o.extraStops > 0
             let icon = multi ? "🚫 multi-stop" : (tooFar ? "🚫 \(one(o.pickupKm ?? 0)) km away" :
-                       (s.verdict == .take ? "✅" : (s.verdict == .ok ? "🟡" : "⛔")))
+                       (s.verdict == .take ? "✅" : (s.verdict == .ok ? "🟡" : (s.verdict == .late ? "⏰ late" : "⛔"))))
             summary.append("\(icon) \(Int(s.perHour))/hr \(o.pickup) → \(o.drop) (\(money(o.fare)))")
             if notified.contains(o.key) { continue }
             notified.insert(o.key)
-            guard s.verdict != .skip, !tooFar, !multi else { continue }
+            guard s.verdict == .take || s.verdict == .ok, !tooFar, !multi else { continue }
             let label = s.verdict == .take ? "✅ TAKE" : "🟡 OK"
             let title = "\(label) +\(money(s.netGain)) net · \(Int(s.perHour))/hr"
             let pool = (o.type != nil && o.type!.lowercased() != "regular") ? " · \(o.type!)" : ""
             let body = "\(o.pickup) → \(o.drop)\(pool)\nPickup \(one(s.pickupKm)) km (max \(one(s.maxPickupKm))) · min fare \(money(s.minFare))" +
-                (drops.isEmpty ? "" : " · stacks with \(drops.count) on board")
+                (drops.isEmpty ? "" : " · stacks with \(drops.count) on board") +
+                (s.spareMin.map { " · \(Int($0)) min spare for \(gl?.name ?? "goal")" } ?? "")
             post(id: o.key, title: title, body: body, sound: true)
         }
         status("👀 Read \(lines.count) lines · \(parsed.count) offer\(parsed.count == 1 ? "" : "s")",

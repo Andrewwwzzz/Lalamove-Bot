@@ -128,6 +128,23 @@ enum OfferParser {
         return out.filter { seen.insert($0.key).inserted }
     }
 
+    private static let goalRx = rx(#"GOAL[:;]?\s*(.+?)\s+BY\s+(\d{1,2})\s?[:.]\s?(\d{2})"#)
+
+    /// The Offer Reader app shows "GOAL: <place> BY HH:MM" or "GOAL: NONE".
+    /// Returns nil if no goal line is on screen, ("", 0, 0) for NONE.
+    static func goal(_ lines: [OcrLine]) -> (place: String, hour: Int, minute: Int)? {
+        for l in lines {
+            let t = l.text.trimmingCharacters(in: .whitespaces)
+            if t.uppercased().hasPrefix("GOAL") && t.uppercased().contains("NONE") { return ("", 0, 0) }
+            let ns = NSRange(t.startIndex..., in: t)
+            guard let m = goalRx.firstMatch(in: t, range: ns),
+                  let r1 = Range(m.range(at: 1), in: t), let r2 = Range(m.range(at: 2), in: t), let r3 = Range(m.range(at: 3), in: t),
+                  let h = Int(t[r2]), let mi = Int(t[r3]), h < 24, mi < 60 else { continue }
+            return (String(t[r1]).trimmingCharacters(in: .whitespaces), h, mi)
+        }
+        return nil
+    }
+
     /// Lalamove's Record screen has the Ongoing / Completed / Canceled tabs at the top.
     static func isRecordScreen(_ lines: [OcrLine]) -> Bool {
         let t = Set(lines.map { $0.text.trimmingCharacters(in: .whitespaces).lowercased() })

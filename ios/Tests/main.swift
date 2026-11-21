@@ -38,5 +38,20 @@ check(s.perHour > 14 && s.perHour < 20, "Science Park → Springside ~15/hr")
 let (a, b) = Scorer.coefficients(target: 15)
 check(abs(a - 1.134) < 0.01 && abs(b - 3.40) < 0.01, "rule 3.40 + 1.13/km at 15/hr")
 
+// Goal line from the app, and destination-aware scoring
+let g = OfferParser.goal([l("Offer Reader", 50), l("GOAL: Paya Lebar BY 20:00", 120)])
+check(g?.place == "Paya Lebar" && g?.hour == 20 && g?.minute == 0, "reads goal line")
+check(OfferParser.goal([l("GOAL: NONE", 120)])?.place == "", "reads empty goal")
+let A = Geo.areas
+let onWay = Scorer.score(pickup: A["Serangoon"]!, drop: A["Eunos"]!, pickupKm: 1.0, fare: 11, priority: 0,
+                         onBoardDrops: [], target: 14, goal: A["Paya Lebar"]!, minutesLeft: 60)
+let noGoal = Scorer.score(pickup: A["Serangoon"]!, drop: A["Eunos"]!, pickupKm: 1.0, fare: 11, priority: 0,
+                          onBoardDrops: [], target: 14)
+print("on the way:", onWay.perHour, onWay.spareMin ?? -1, "no goal:", noGoal.perHour)
+check(onWay.perHour > noGoal.perHour, "offer heading to goal scores higher")
+let late = Scorer.score(pickup: A["Kovan"]!, drop: A["Bukit Permei"]!, pickupKm: 1.0, fare: 15.9, priority: 0,
+                        onBoardDrops: [], target: 14, goal: A["Paya Lebar"]!, minutesLeft: 40)
+check(late.verdict == .late, "offer that misses the deadline is LATE")
+
 if failures > 0 { print("\(failures) check(s) failed"); exit(1) }
 print("All checks passed")
