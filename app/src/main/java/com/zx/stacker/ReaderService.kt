@@ -436,10 +436,13 @@ class ReaderService : Service() {
                             Verdict.LATE -> "⏰ LATE ${(-(s.spareMin ?: 0.0)).toInt()} min" to Overlay.RED
                         }
                         val timeLine = s.spareMin?.let { if (it >= 0) " · ${it.toInt()} min spare" else "" } ?: ""
-                        val txt = "$label  +${money(s.netGain)} net · ${s.perHour.toInt()}/hr\n" +
+                        // When this order would be delivered on the best route (planned without the goal leg).
+                        val withPlan = Scorer.plan(start, current + Job(p, d, false))
+                        val deliverMin = withPlan.stops.firstOrNull { it.job == current.size && !it.pickup }?.etaMin ?: s.extraMin
+                        val doneAt = clock(System.currentTimeMillis() + (deliverMin * 60_000).toLong())
+                        val txt = "$label  +${money(s.netGain)} net · done ~$doneAt\n" +
                             "$title · fare ${money(o.fare)}${if (o.priority > 0) " + ${money(o.priority)}" else ""}\n" +
-                            "pickup ${one(if (current.isEmpty() && o.pickupKm != null) o.pickupKm else s.pickupKm)} km (max ${one(s.maxPickupKm)}) · needs fare ≥ ${money(s.minFare)}\n" +
-                            "+${one(s.extraKm)} km · +${s.extraMin.toInt()} min$timeLine"
+                            "pickup ${one(pk)} km · ~${deliverMin.toInt()} min · ${s.perHour.toInt()}/hr$timeLine"
                         if ((s.verdict == Verdict.TAKE || s.verdict == Verdict.OK) && alerted.add(o.key)) buzz()
                         if (o.bottom > o.top) when (s.verdict) {
                             Verdict.TAKE -> boxes.add(Highlighter.Box(o.top, o.bottom, Overlay.GREEN))

@@ -132,10 +132,15 @@ class SampleHandler: RPBroadcastSampleHandler {
             notified.insert(o.key)
             guard s.verdict == .take || s.verdict == .ok, !tooFar, !multi else { continue }
             let label = s.verdict == .take ? "✅ TAKE" : "🟡 OK"
-            let title = "\(label) +\(money(s.netGain)) net · \(Int(s.perHour))/hr"
+            // When this order would be delivered: pickup, then the best order through your on-board drops.
+            let deliverMin = drops.isEmpty
+                ? Scorer.minutes((o.pickupKm ?? 3.0) + Geo.km(p, d), stops: 2)
+                : Scorer.minutes((o.pickupKm ?? 3.0) + Scorer.routeKm(from: p, through: drops + [d]), stops: 2 + drops.count)
+            let doneAt = clock(Date().addingTimeInterval(deliverMin * 60))
+            let title = "\(label) · +\(money(s.netGain)) net · done ~\(doneAt)"
             let pool = (o.type != nil && o.type!.lowercased() != "regular") ? " · \(o.type!)" : ""
             let fareText = "Fare \(money(o.fare))" + (o.priority > 0 ? " + \(money(o.priority)) priority" : "")
-            let body = "\(o.pickup) → \(o.drop)\(pool)\n\(fareText) · Pickup \(one(s.pickupKm)) km (max \(one(s.maxPickupKm))) · needs fare ≥ \(money(s.minFare))" +
+            let body = "\(o.pickup) → \(o.drop)\(pool)\n\(fareText) · pickup \(one(s.pickupKm)) km · ~\(Int(deliverMin)) min · \(Int(s.perHour))/hr" +
                 (drops.isEmpty ? "" : " · stacks with \(drops.count) on board") +
                 (s.spareMin.map { " · \(Int($0)) min spare for \(gl?.name ?? "goal")" } ?? "")
             post(id: o.key, title: title, body: body, sound: true)
