@@ -40,6 +40,7 @@ object Geo {
         "Clarke Quay" to LatLng(1.2884, 103.8465),
         "Clementi" to LatLng(1.3151, 103.7652),
         "Commonwealth" to LatLng(1.3025, 103.798),
+        "Cuppage" to LatLng(1.301, 103.8405),
         "Defu" to LatLng(1.353, 103.892),
         "Dhoby Ghaut" to LatLng(1.299, 103.8455),
         "Dover" to LatLng(1.3114, 103.7786),
