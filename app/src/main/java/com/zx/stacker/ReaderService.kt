@@ -80,6 +80,9 @@ class ReaderService : Service() {
     private val alerted = HashSet<String>()
     private val nearDrop = HashSet<String>()
     private var syncNote: String? = null
+    private var lastLineCount = -1
+    private var blackFrame = false
+    private var lastDump = 0L
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(r: LocationResult) {
@@ -232,10 +235,28 @@ class ReaderService : Service() {
         if (img == null) { try { render() } catch (e: Throwable) { store.lastError = "Score: $e" }; return }   // screen unchanged: just re-score (GPS may have moved)
         val bmp = try { toBitmap(img) } catch (e: Exception) { null } finally { img.close() }
         if (bmp == null) return
+        blackFrame = isBlack(bmp)
         busy = true
         recognizer.process(InputImage.fromBitmap(bmp, 0))
             .addOnSuccessListener { try { handle(it) } catch (e: Throwable) { store.lastError = "Read: $e" } }
             .addOnCompleteListener { busy = false; bmp.recycle() }
+    }
+
+    /** True if the captured frame is (almost) all black, i.e. the app on screen blocks capture. */
+    private fun isBlack(b: Bitmap): Boolean {
+        var bright = 0
+        val stepX = maxOf(1, b.width / 24); val stepY = maxOf(1, b.height / 48)
+        var y = 0
+        while (y < b.height) {
+            var x = 0
+            while (x < b.width) {
+                val c = b.getPixel(x, y)
+                if (((c shr 16) and 0xFF) + ((c shr 8) and 0xFF) + (c and 0xFF) > 60) bright++
+                x += stepX
+            }
+            y += stepY
+        }
+        return bright < 5
     }
 
     private fun toBitmap(img: Image): Bitmap {
@@ -260,6 +281,13 @@ class ReaderService : Service() {
             lines.add(OcrLine(line.text, r.left, r.top, r.right, r.bottom))
         }
         val parsed = OfferParser.parse(lines)
+        lastLineCount = lines.size
+        val now = System.currentTimeMillis()
+        if (now - lastDump > 3000) {
+            lastDump = now
+            store.lastScreen = "${lines.size} lines, ${parsed.size} offers" + (if (blackFrame) ", frame is BLACK" else "") + "\n" +
+                lines.sortedBy { it.top }.joinToString("\n") { "[${it.top}] ${it.text}" }.take(1500)
+        }
         if (isRecordScreen(lines)) {
             // Record screen: Ongoing cards are YOUR jobs, Completed/Canceled are history. Never score them as offers.
             if (lines.any { it.text.trim().equals("In Progress", ignoreCase = true) }) syncOrders(parsed)
@@ -350,7 +378,12 @@ class ReaderService : Service() {
 
         if (offers.isEmpty()) {
             val onBoard = current.size
-            val note = syncNote ?: "Watching · no offers on screen"
+            val diag = when {
+                blackFrame -> " · ⚫ screen capture is black"
+                lastLineCount >= 0 -> " · read $lastLineCount lines"
+                else -> ""
+            }
+            val note = syncNote ?: "Watching · no offers on screen$diag"
             val boardNet = if (onBoard > 0 && start != null)
                 " · ${money(Scorer.netEarnings(store.orders().map { it.fare to it.priority }, Scorer.plan(start, current, dest?.loc).km))} net" else ""
             rows.add(Overlay.Row(note + (if (onBoard > 0) " · $onBoard on board$boardNet" else "") + if (start == null) " · waiting for GPS" else "", if (syncNote != null) Overlay.ORANGE else Overlay.GREY))

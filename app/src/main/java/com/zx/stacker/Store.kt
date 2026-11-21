@@ -30,6 +30,11 @@ class Store(ctx: Context) {
         get() = prefs.getString("lastError", null)
         set(v) { prefs.edit().apply { if (v == null) remove("lastError") else putString("lastError", v) }.commit() }
 
+    /** What the reader last saw on screen (for troubleshooting). */
+    var lastScreen: String
+        get() = prefs.getString("lastScreen", "") ?: ""
+        set(v) { prefs.edit().putString("lastScreen", v).apply() }
+
     fun here(): LatLng? {
         if (!prefs.contains("hereLat")) return null
         return LatLng(prefs.getFloat("hereLat", 0f).toDouble(), prefs.getFloat("hereLng", 0f).toDouble())

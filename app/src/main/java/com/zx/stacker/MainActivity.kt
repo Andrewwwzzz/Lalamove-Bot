@@ -190,6 +190,11 @@ class MainActivity : Activity() {
             }
         })
 
+        col.addView(h("Last screen read (troubleshooting)"))
+        col.addView(TextView(this).apply {
+            tag = "dump"; textSize = 11f; alpha = 0.8f; setTextIsSelectable(true)
+        })
+
         col.addView(h("How to use"))
         col.addView(TextView(this).apply {
             text = "1. Tap Start and allow location, notifications and \"Display over other apps\".\n" +
@@ -208,6 +213,7 @@ class MainActivity : Activity() {
     private fun refresh() {
         val on = ReaderService.running
         startBtn.text = if (on) "Stop reading" else "Start reading offers"
+        (window.decorView.findViewWithTag<TextView>("dump"))?.text = store.lastScreen.ifEmpty { "Nothing read yet. Start reading, open Lalamove, then come back here." }
         val err = store.lastError
         status.text = (if (on) "Running. Open Lalamove → Pickup." else "Stopped.") +
             (if (err != null) "\n⚠️ Last error: $err" else "")
