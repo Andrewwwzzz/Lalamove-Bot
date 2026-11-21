@@ -1,0 +1,52 @@
+name: OfferReader
+options:
+  bundleIdPrefix: com.zx
+  deploymentTarget:
+    iOS: "15.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "$(BUILD_NUMBER)"
+    BUILD_NUMBER: "1"
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+targets:
+  OfferReader:
+    type: application
+    platform: iOS
+    sources: [App, Shared]
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Offer Reader
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zx.offerreader
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - target: OfferBroadcast
+        embed: true
+  OfferBroadcast:
+    type: app-extension
+    platform: iOS
+    sources: [Broadcast, Shared]
+    info:
+      path: Broadcast/Info.plist
+      properties:
+        CFBundleDisplayName: Offer Reader
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.broadcast-services-upload
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).SampleHandler"
+          RPBroadcastProcessMode: RPBroadcastProcessModeSampleBuffer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zx.offerreader.broadcast
+        TARGETED_DEVICE_FAMILY: "1"
