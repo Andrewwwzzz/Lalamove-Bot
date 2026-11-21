@@ -44,7 +44,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Offer Reader").font(.largeTitle.bold())
-                Text("Reads Lalamove offers on your screen and notifies you about single-stop jobs within 2.5 km that pay at least S$14/hr net. It never taps anything. You still accept in Lalamove.")
+                Text("Reads Lalamove offers on your screen and notifies you about single-stop jobs within 3 km that pay at least S$14/hr net. It never taps anything. You still accept in Lalamove.")
                     .foregroundStyle(.secondary)
 
                 // The reader picks this line up off the screen, so keep it plain and big.
@@ -100,7 +100,7 @@ struct ContentView: View {
                     Text("3. After accepting a job, open Record → Ongoing for a second. Your jobs sync, and new offers are scored as stacks on top of them.")
                     Text("With a goal set, offers heading towards it score higher (the km you'd drive anyway are free), banners show minutes to spare, and anything that would make you late is skipped.")
                     Text("4. To stop, tap the red indicator, or come back here and tap the circle.")
-                    Text("Take-home = 78.5% of fare + 95% of priority fee. Petrol S$0.25/km, other costs S$1/hr, 25 km/h + 5 min per stop. Distances are estimates; uses Lalamove's own pickup distance.")
+                    Text("Take-home = 78.5% of fare + 94% of priority fee. Petrol S$0.25/km, other costs S$1/hr, 25 km/h + 5 min per stop. Distances are estimates; uses Lalamove's own pickup distance.")
                         .font(.footnote).foregroundStyle(.secondary)
                     Text("Version \(version)").font(.footnote).foregroundStyle(.secondary)
                 }

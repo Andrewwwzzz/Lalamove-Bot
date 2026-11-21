@@ -204,7 +204,7 @@ class MainActivity : Activity() {
                 "4. After you accept a job, open Record → Ongoing for a second. Your ongoing orders sync automatically, so new offers are scored as stacks.\n" +
                 "5. Pickups and drops tick off by GPS (within ~500 m). Use Picked / Done below if it gets one wrong.\n" +
                 "6. Need to be somewhere by a time? Set a goal above. The route plan ends there, offers heading that way score higher, and ones that would make you late show ⏰ LATE.\n\n" +
-                "Take-home = 78.5% of fare + 95% of priority fee. Petrol S$0.25/km, other costs S$1/hr, 25 km/h + 5 min per stop. Distances are estimates."
+                "Take-home = 78.5% of fare + 94% of priority fee. Petrol S$0.25/km, other costs S$1/hr, 25 km/h + 5 min per stop. Distances are estimates."
             alpha = 0.8f
         })
 

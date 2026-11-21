@@ -12,7 +12,7 @@ import CoreLocation
 class SampleHandler: RPBroadcastSampleHandler {
 
     private let target = 14.0                     // S$/hr net
-    private let maxPickupKm = 2.5                 // ignore offers whose pickup is further than this
+    private let maxPickupKm = 3.0                 // ignore offers whose pickup is further than this
     private var lastRead = Date.distantPast
     private var notified = Set<String>()
     private let defaults = UserDefaults.standard

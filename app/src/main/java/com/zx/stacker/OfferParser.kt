@@ -45,6 +45,11 @@ object OfferParser {
     private val KM = Regex("""^[^\d\w]{0,4}(\d{1,3}(?:[.,]\d{1,2})?)\s?km\b""", RegexOption.IGNORE_CASE)
     private val ID = Regex("""#\s?\d{6,}""")
     private val TIME = Regex("""\d{1,2}:\d{2}""")
+    /** The round pickup icon / pin read as a letter in front of the name: "O Kovan", "0 Punggol". */
+    private val ICON_PREFIX = Regex("""^(?:[OoQ0○◯◦•·°@]|\(\))\s+(?=\p{Lu})""")
+
+    fun cleanPlace(s: String): String = s.replaceFirst(ICON_PREFIX, "")
+
     private val STOPS = Regex("""^(\d{1,2})\s?stops?\b""", RegexOption.IGNORE_CASE)
 
     private val TYPES = setOf("regular", "pooling", "priority", "scheduled", "express", "multi-stop", "multi stop")
@@ -89,7 +94,7 @@ object OfferParser {
         fun startCard(top: Int) { places.clear(); jobKm = null; pickupKm = null; type = null; priority = 0.0; stops = 0; inCard = true; cardTop = top }
 
         for (line in sorted) {
-            val t = line.text.trim()
+            val t = cleanPlace(line.text.trim())
             if (t.isEmpty()) continue
             val low = t.lowercase()
 

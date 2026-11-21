@@ -40,6 +40,15 @@ enum OfferParser {
     private static let bonusRx = rx(#"\+\s?\$?\s?(\d{1,3}[.,]\d{1,2})"#)
     private static let idRx = rx(#"#\s?\d{6,}"#)
     private static let timeRx = rx(#"\d{1,2}:\d{2}"#)
+    /// The round pickup icon / pin read as a letter in front of the name: "O Kovan", "0 Punggol", "◦ Bugis".
+    private static let iconPrefixRx = rx(#"^(?:[OoQ0○◯◦•·°@]|\(\))\s+(?=\p{Lu})"#)
+
+    /// Removes an icon read as a character before a place name.
+    static func cleanPlace(_ s: String) -> String {
+        let ns = NSRange(s.startIndex..., in: s)
+        return iconPrefixRx.stringByReplacingMatches(in: s, range: ns, withTemplate: "")
+    }
+
     private static let stopsRx = rx(#"^(\d{1,2})\s?stops?\b"#)
 
     private static let types: Set<String> = ["regular", "pooling", "priority", "scheduled", "express", "multi-stop", "multi stop"]
@@ -88,7 +97,7 @@ enum OfferParser {
         func startCard() { places = []; jobKm = nil; pickupKm = nil; type = nil; priority = 0; stops = 0; inCard = true }
 
         for line in sorted {
-            let t = line.text.trimmingCharacters(in: .whitespaces)
+            let t = cleanPlace(line.text.trimmingCharacters(in: .whitespaces))
             if t.isEmpty { continue }
             let low = t.lowercased()
 

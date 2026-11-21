@@ -18,7 +18,7 @@ struct Score {
 /// Same maths as the Android app and web tracker.
 enum Scorer {
     static let keep = 0.785       // share of shown fare you keep (15% commission + 9% VAT on it + ~5% CPF)
-    static let keepPriority = 0.95 // share of priority fee you keep (CPF only)
+    static let keepPriority = 0.94 // share of priority fee you keep (CPF ~6% only, no commission)
     static let fuel = 0.25        // S$/km (8 km/L at S$2/L)
     static let other = 1.0        // S$/hr other costs
     static let speed = 25.0       // km/h average incl. traffic

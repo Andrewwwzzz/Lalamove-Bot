@@ -30,7 +30,7 @@ data class Score(
 /** Same maths as the web tracker. Pure Kotlin. */
 object Scorer {
     const val KEEP = 0.785        // share of shown fare you keep (15% commission + 9% VAT on it + ~5% CPF)
-    const val KEEP_PRI = 0.95     // share of priority fee you keep (CPF only)
+    const val KEEP_PRI = 0.94     // share of priority fee you keep (CPF ~6% only, no commission)
     const val FUEL = 0.25         // S$/km  (8 km/L at S$2/L)
     const val OTHER = 1.0         // S$/hr other costs
     const val SPEED = 25.0        // km/h average incl. traffic

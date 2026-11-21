@@ -59,7 +59,7 @@ class ReaderService : Service() {
         private const val NOTIF_ID = 7
         private const val INTERVAL_MS = 700L
         private const val CAPTURE_WIDTH = 720
-        private const val MAX_PICKUP_KM = 2.5   // your rule: ignore pickups further than this
+        private const val MAX_PICKUP_KM = 3.0   // your rule: ignore pickups further than this
     }
 
     private val main = Handler(Looper.getMainLooper())

@@ -22,6 +22,10 @@ check(offers.count > 2 && offers[2].drop == "Telok Blangah Heights", "multi-stop
 check(offers.count > 2 && offers[2].extraStops == 2, "2 stops detected")
 check(offers.first?.extraStops == 0, "single stop detected")
 
+// Pickup icon read as a letter in front of the place
+let icons = OfferParser.parse([l("(~2.4 km) Pick Up Now", 100), l("Regular", 150), l("O Kovan", 200), l("0 Punggol", 250), l("S$14.20", 320, 900)])
+check(icons.first?.pickup == "Kovan" && icons.first?.drop == "Punggol", "strips icon letter: \(icons.first.map { $0.pickup + " → " + $0.drop } ?? "none")")
+
 // Record → Ongoing
 let ongoing = [l("Ongoing", 170), l("Completed", 170, 500), l("Canceled", 170, 900), l("In Progress", 320), l("11.7 km", 440),
                l("# 3632751025968100019", 440, 700), l("Suntec City", 500, 140), l("Bedok", 580, 140), l("S$15.70", 720, 900)]
