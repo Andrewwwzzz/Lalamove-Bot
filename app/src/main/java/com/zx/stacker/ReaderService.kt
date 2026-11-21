@@ -144,10 +144,14 @@ class ReaderService : Service() {
         startCapture(mp)
         startLocation()
 
-        highlighter = Highlighter(this).also { it.show() }   // added first so the bubble sits above it
-        overlay = Overlay(this).also {
-            it.show()
-            it.setRows(listOf(Overlay.Row("Offer Reader on · open Lalamove Pickup", Overlay.ORANGE)))
+        try {
+            highlighter = Highlighter(this).also { it.show() }   // added first so the bubble sits above it
+            overlay = Overlay(this).also {
+                it.show()
+                it.setRows(listOf(Overlay.Row("Offer Reader on · open Lalamove Pickup", Overlay.ORANGE)))
+            }
+        } catch (e: Exception) {
+            throw IllegalStateException("phone blocked the bubble (Display over other apps is off for Offer Reader): ${e.message}")
         }
         running = true
         main.postDelayed(tick, INTERVAL_MS)

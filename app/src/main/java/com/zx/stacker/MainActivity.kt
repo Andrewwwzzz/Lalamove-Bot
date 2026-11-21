@@ -36,6 +36,7 @@ class MainActivity : Activity() {
     private val reqPerms = 12
     private var askedPerms = false
     private var resumeStart = false
+    private var overlayAsked = false
 
     private lateinit var store: Store
     private lateinit var resolver: PlaceResolver
@@ -64,7 +65,7 @@ class MainActivity : Activity() {
         super.onResume()
         refresh()
         // Came back from the "Display over other apps" screen: carry on with Start automatically.
-        if (resumeStart && Settings.canDrawOverlays(this)) { resumeStart = false; main.postDelayed({ onStartClicked() }, 300) }
+        if (resumeStart) { resumeStart = false; main.postDelayed({ onStartClicked() }, 400) }
     }
 
     // ---------- UI ----------
@@ -293,7 +294,9 @@ class MainActivity : Activity() {
             requestPermissions(need.toTypedArray(), reqPerms)
             return
         }
-        if (!Settings.canDrawOverlays(this)) {
+        // Some phones keep reporting "not allowed" after you switch it on, so only send you there once.
+        if (!Settings.canDrawOverlays(this) && !overlayAsked) {
+            overlayAsked = true
             resumeStart = true
             toast("Turn on \"Display over other apps\" for Offer Reader, then press back.")
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
