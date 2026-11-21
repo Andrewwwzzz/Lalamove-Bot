@@ -25,6 +25,11 @@ class Store(ctx: Context) {
         get() = prefs.getFloat("target", 14f).toDouble()
         set(v) { prefs.edit().putFloat("target", v.toFloat()).apply() }
 
+    /** Last crash/error message, shown on the main screen so problems are visible without a computer. */
+    var lastError: String?
+        get() = prefs.getString("lastError", null)
+        set(v) { prefs.edit().apply { if (v == null) remove("lastError") else putString("lastError", v) }.commit() }
+
     fun here(): LatLng? {
         if (!prefs.contains("hereLat")) return null
         return LatLng(prefs.getFloat("hereLat", 0f).toDouble(), prefs.getFloat("hereLng", 0f).toDouble())

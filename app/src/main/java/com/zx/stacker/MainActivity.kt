@@ -35,6 +35,7 @@ class MainActivity : Activity() {
     private val reqCapture = 11
     private val reqPerms = 12
     private var askedPerms = false
+    private var resumeStart = false
 
     private lateinit var store: Store
     private lateinit var resolver: PlaceResolver
@@ -50,12 +51,20 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         store = Store(this)
         resolver = PlaceResolver(this)
+        // Save any crash (app or reader service) so it shows on screen next time.
+        val prev = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            try { Store(applicationContext).lastError = e.toString() + " @ " + (e.stackTrace.firstOrNull { it.className.contains("stacker") } ?: e.stackTrace.firstOrNull()) } catch (_: Throwable) {}
+            prev?.uncaughtException(t, e)
+        }
         setContentView(buildUi())
     }
 
     override fun onResume() {
         super.onResume()
         refresh()
+        // Came back from the "Display over other apps" screen: carry on with Start automatically.
+        if (resumeStart && Settings.canDrawOverlays(this)) { resumeStart = false; main.postDelayed({ onStartClicked() }, 300) }
     }
 
     // ---------- UI ----------
@@ -198,7 +207,9 @@ class MainActivity : Activity() {
     private fun refresh() {
         val on = ReaderService.running
         startBtn.text = if (on) "Stop reading" else "Start reading offers"
-        status.text = if (on) "Running. Open Lalamove → Pickup." else "Stopped."
+        val err = store.lastError
+        status.text = (if (on) "Running. Open Lalamove → Pickup." else "Stopped.") +
+            (if (err != null) "\n⚠️ Last error: $err" else "")
 
         val dest = store.destination()
         destStatus.text = if (dest == null) "Optional. Without one, offers are scored on S$/hr only."
@@ -283,7 +294,8 @@ class MainActivity : Activity() {
             return
         }
         if (!Settings.canDrawOverlays(this)) {
-            toast("Turn on \"Display over other apps\" for Offer Reader, then come back and tap Start.")
+            resumeStart = true
+            toast("Turn on \"Display over other apps\" for Offer Reader, then press back.")
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
             return
         }
@@ -304,6 +316,7 @@ class MainActivity : Activity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != reqCapture) return
         if (resultCode != RESULT_OK || data == null) { toast("Screen sharing was not allowed."); return }
+        store.lastError = null
         val i = Intent(this, ReaderService::class.java)
             .putExtra(ReaderService.EXTRA_CODE, resultCode)
             .putExtra(ReaderService.EXTRA_DATA, data)

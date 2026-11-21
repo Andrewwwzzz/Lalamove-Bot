@@ -121,13 +121,23 @@ class ReaderService : Service() {
         store = Store(this)
         resolver = PlaceResolver(this)
         here = store.here()
+        try {
+            begin(code, data)
+        } catch (e: Throwable) {
+            store.lastError = "Start failed: $e"
+            android.widget.Toast.makeText(this, "Offer Reader couldn't start: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            stopSelf()
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun begin(code: Int, data: Intent) {
 
         // Android 14+: must be in the foreground (type mediaProjection) before getMediaProjection.
         startInForeground()
 
         val mpm = getSystemService(MediaProjectionManager::class.java)
-        val mp = try { mpm.getMediaProjection(code, data) } catch (e: Exception) { null }
-        if (mp == null) { stopSelf(); return START_NOT_STICKY }
+        val mp = mpm.getMediaProjection(code, data) ?: throw IllegalStateException("screen sharing token was refused")
         projection = mp
         mp.registerCallback(projectionCallback, main)
 
@@ -141,7 +151,6 @@ class ReaderService : Service() {
         }
         running = true
         main.postDelayed(tick, INTERVAL_MS)
-        return START_NOT_STICKY
     }
 
     private fun hasLocation() =
@@ -216,12 +225,12 @@ class ReaderService : Service() {
     private fun grab() {
         if (busy) return
         val img = try { reader?.acquireLatestImage() } catch (e: Exception) { null }
-        if (img == null) { render(); return }   // screen unchanged: just re-score (GPS may have moved)
+        if (img == null) { try { render() } catch (e: Throwable) { store.lastError = "Score: $e" }; return }   // screen unchanged: just re-score (GPS may have moved)
         val bmp = try { toBitmap(img) } catch (e: Exception) { null } finally { img.close() }
         if (bmp == null) return
         busy = true
         recognizer.process(InputImage.fromBitmap(bmp, 0))
-            .addOnSuccessListener { handle(it) }
+            .addOnSuccessListener { try { handle(it) } catch (e: Throwable) { store.lastError = "Read: $e" } }
             .addOnCompleteListener { busy = false; bmp.recycle() }
     }
 
