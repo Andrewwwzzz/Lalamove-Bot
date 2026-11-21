@@ -33,7 +33,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Offer Reader").font(.largeTitle.bold())
-                Text("Reads Lalamove offers on your screen and notifies you about anything paying at least S$14/hr net. It never taps anything. You still accept in Lalamove.")
+                Text("Reads Lalamove offers on your screen and notifies you about single-stop jobs within 2.5 km that pay at least S$14/hr net. It never taps anything. You still accept in Lalamove.")
                     .foregroundStyle(.secondary)
 
                 VStack(spacing: 8) {

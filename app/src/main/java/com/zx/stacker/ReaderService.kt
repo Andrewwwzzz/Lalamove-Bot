@@ -59,6 +59,7 @@ class ReaderService : Service() {
         private const val NOTIF_ID = 7
         private const val INTERVAL_MS = 700L
         private const val CAPTURE_WIDTH = 720
+        private const val MAX_PICKUP_KM = 2.5   // your rule: ignore pickups further than this
     }
 
     private val main = Handler(Looper.getMainLooper())
@@ -418,6 +419,16 @@ class ReaderService : Service() {
                     p == null || d == null -> rows.add(Overlay.Row("$title\nlocating place…", Overlay.GREY))
                     else -> {
                         val s = Scorer.score(start, current, p, d, o.fare, o.priority, target, dest?.loc, minutesLeft)
+                        val pk = if (current.isEmpty() && o.pickupKm != null) o.pickupKm else s.pickupKm
+                        val blocked = when {
+                            o.extraStops > 0 -> "🚫 multi-stop"
+                            pk > MAX_PICKUP_KM -> "🚫 pickup ${one(pk)} km"
+                            else -> null
+                        }
+                        if (blocked != null) {
+                            rows.add(Overlay.Row("$blocked · $title", Overlay.GREY))
+                            continue
+                        }
                         val (label, color) = when (s.verdict) {
                             Verdict.TAKE -> "✅ TAKE" to Overlay.GREEN
                             Verdict.OK -> "🟡 OK" to Overlay.AMBER

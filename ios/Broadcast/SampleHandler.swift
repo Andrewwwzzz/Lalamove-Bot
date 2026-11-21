@@ -12,6 +12,7 @@ import CoreLocation
 class SampleHandler: RPBroadcastSampleHandler {
 
     private let target = 14.0                     // S$/hr net
+    private let maxPickupKm = 2.5                 // ignore offers whose pickup is further than this
     private var lastRead = Date.distantPast
     private var notified = Set<String>()
     private let defaults = UserDefaults.standard
@@ -83,11 +84,15 @@ class SampleHandler: RPBroadcastSampleHandler {
             }
             let s = Scorer.score(pickup: p, drop: d, pickupKm: o.pickupKm ?? 3.0, fare: o.fare, priority: o.priority,
                                  onBoardDrops: drops, target: target)
-            let icon = s.verdict == .take ? "✅" : (s.verdict == .ok ? "🟡" : "⛔")
+            // Your rules: single stop only, pickup within 2.5 km.
+            let tooFar = (o.pickupKm ?? 99) > maxPickupKm
+            let multi = o.extraStops > 0
+            let icon = multi ? "🚫 multi-stop" : (tooFar ? "🚫 \(one(o.pickupKm ?? 0)) km away" :
+                       (s.verdict == .take ? "✅" : (s.verdict == .ok ? "🟡" : "⛔")))
             summary.append("\(icon) \(Int(s.perHour))/hr \(o.pickup) → \(o.drop) (\(money(o.fare)))")
             if notified.contains(o.key) { continue }
             notified.insert(o.key)
-            guard s.verdict != .skip else { continue }
+            guard s.verdict != .skip, !tooFar, !multi else { continue }
             let label = s.verdict == .take ? "✅ TAKE" : "🟡 OK"
             let title = "\(label) +\(money(s.netGain)) net · \(Int(s.perHour))/hr"
             let pool = (o.type != nil && o.type!.lowercased() != "regular") ? " · \(o.type!)" : ""

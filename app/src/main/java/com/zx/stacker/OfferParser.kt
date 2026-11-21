@@ -11,6 +11,7 @@ data class ParsedOffer(
     val jobKm: Double?,        // trip distance (Record screen "11.7 km")
     val pickupKm: Double? = null, // Lalamove's distance from you to the pickup (Pickup screen "(~2.7 km) Pick Up Now")
     val type: String? = null,     // "Regular", "Pooling", ...
+    val extraStops: Int = 0,      // "1 stop" / "2 stops" line between pickup and drop
     val top: Int = 0,             // card's top edge on screen (px)
     val bottom: Int = 0           // card's bottom edge on screen (px)
 ) {
@@ -44,6 +45,7 @@ object OfferParser {
     private val KM = Regex("""^[^\d\w]{0,4}(\d{1,3}(?:[.,]\d{1,2})?)\s?km\b""", RegexOption.IGNORE_CASE)
     private val ID = Regex("""#\s?\d{6,}""")
     private val TIME = Regex("""\d{1,2}:\d{2}""")
+    private val STOPS = Regex("""^(\d{1,2})\s?stops?\b""", RegexOption.IGNORE_CASE)
 
     private val TYPES = setOf("regular", "pooling", "priority", "scheduled", "express", "multi-stop", "multi stop")
 
@@ -82,8 +84,9 @@ object OfferParser {
         var type: String? = null
         var priority = 0.0
         var cardTop = 0
+        var stops = 0
 
-        fun startCard(top: Int) { places.clear(); jobKm = null; pickupKm = null; type = null; priority = 0.0; inCard = true; cardTop = top }
+        fun startCard(top: Int) { places.clear(); jobKm = null; pickupKm = null; type = null; priority = 0.0; stops = 0; inCard = true; cardTop = top }
 
         for (line in sorted) {
             val t = line.text.trim()
@@ -102,6 +105,9 @@ object OfferParser {
                 continue
             }
 
+            val st = STOPS.find(t)
+            if (inCard && st != null) { stops = st.groupValues[1].toIntOrNull() ?: 1; continue }
+            if (low.contains("multi") && low.contains("stop")) stops = maxOf(stops, 1)
             if (low in TYPES) {
                 if (!inCard) startCard(line.top)   // header was missed: the type tag still marks a new card
                 type = t; continue
@@ -114,7 +120,7 @@ object OfferParser {
                 if (low.contains("priority")) { priority = v; continue }
                 BONUS.find(t.substring(fm.range.last + 1))?.let { priority += num(it.groupValues[1]) ?: 0.0 }
                 if (inCard && v in 3.0..300.0 && places.size >= 2) {
-                    out.add(ParsedOffer(places[0], places[1], v, priority, jobKm, pickupKm, type, cardTop, line.bottom))
+                    out.add(ParsedOffer(places[0], places[1], v, priority, jobKm, pickupKm, type, stops, cardTop, line.bottom))
                 }
                 places.clear(); inCard = false
                 continue

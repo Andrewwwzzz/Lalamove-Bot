@@ -14,6 +14,7 @@ struct ParsedOffer: Equatable {
     let jobKm: Double?      // Record screen "11.7 km"
     let pickupKm: Double?   // Pickup screen "(~2.7 km) Pick Up Now"
     let type: String?       // "Regular", "Pooling", ...
+    var extraStops: Int = 0 // "1 stop" / "2 stops" line between pickup and drop
     var key: String { "\(pickup)|\(drop)|\(fare)" }
 }
 
@@ -39,6 +40,7 @@ enum OfferParser {
     private static let bonusRx = rx(#"\+\s?\$?\s?(\d{1,3}[.,]\d{1,2})"#)
     private static let idRx = rx(#"#\s?\d{6,}"#)
     private static let timeRx = rx(#"\d{1,2}:\d{2}"#)
+    private static let stopsRx = rx(#"^(\d{1,2})\s?stops?\b"#)
 
     private static let types: Set<String> = ["regular", "pooling", "priority", "scheduled", "express", "multi-stop", "multi stop"]
 
@@ -81,9 +83,9 @@ enum OfferParser {
         var out: [ParsedOffer] = []
         var places: [String] = []
         var inCard = false
-        var jobKm: Double? = nil, pickupKm: Double? = nil, type: String? = nil, priority = 0.0
+        var jobKm: Double? = nil, pickupKm: Double? = nil, type: String? = nil, priority = 0.0, stops = 0
 
-        func startCard() { places = []; jobKm = nil; pickupKm = nil; type = nil; priority = 0; inCard = true }
+        func startCard() { places = []; jobKm = nil; pickupKm = nil; type = nil; priority = 0; stops = 0; inCard = true }
 
         for line in sorted {
             let t = line.text.trimmingCharacters(in: .whitespaces)
@@ -97,6 +99,8 @@ enum OfferParser {
                 if let c = t.first, !c.isNumber { pickupKm = num(k.g1) } else { jobKm = num(k.g1) }
                 continue
             }
+            if inCard, let st = match(stopsRx, t) { stops = Int(st.g1) ?? 1; continue }
+            if low.contains("multi") && low.contains("stop") { stops = max(stops, 1) }
             if types.contains(low) {
                 if !inCard { startCard() }   // header missed: the type tag still marks a new card
                 type = t; continue
@@ -111,8 +115,8 @@ enum OfferParser {
                 let rest = String(t[fm.whole.upperBound...])
                 if let b = match(bonusRx, rest) { priority += num(b.g1) ?? 0 }
                 if inCard && (3...300).contains(v) && places.count >= 2 {
-                    out.append(ParsedOffer(pickup: places[0], drop: places[1], fare: v, priority: priority,
-                                           jobKm: jobKm, pickupKm: pickupKm, type: type))
+                    out.append(ParsedOffer(pickup: places[0], drop: places[1],
+                                           fare: v, priority: priority, jobKm: jobKm, pickupKm: pickupKm, type: type, extraStops: stops))
                 }
                 places = []; inCard = false
                 continue

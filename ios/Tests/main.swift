@@ -19,6 +19,8 @@ check(offers.first?.pickup == "Bukit Merah" && offers.first?.drop == "Novena", "
 check(offers.first?.fare == 18.8 && offers.first?.priority == 1.7, "fare 18.80 + 1.70 priority")
 check(offers.first?.pickupKm == 16.9, "pickup distance 16.9")
 check(offers.count > 2 && offers[2].drop == "Telok Blangah Heights", "multi-stop drop")
+check(offers.count > 2 && offers[2].extraStops == 2, "2 stops detected")
+check(offers.first?.extraStops == 0, "single stop detected")
 
 // Record → Ongoing
 let ongoing = [l("Ongoing", 170), l("Completed", 170, 500), l("Canceled", 170, 900), l("In Progress", 320), l("11.7 km", 440),
