@@ -11,8 +11,10 @@ android {
         applicationId = "com.zx.stacker"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Each cloud build gets a higher number so installs always count as an update.
+        val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = run
+        versionName = "1.$run"
     }
 
     buildTypes {

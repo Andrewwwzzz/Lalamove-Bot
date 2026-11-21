@@ -80,7 +80,8 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(40))
         }
-        col.addView(TextView(this).apply { text = "Offer Reader"; textSize = 28f; typeface = Typeface.DEFAULT_BOLD })
+        val ver = try { packageManager.getPackageInfo(packageName, 0).versionName } catch (_: Exception) { "?" }
+        col.addView(TextView(this).apply { text = "Offer Reader  v$ver"; textSize = 28f; typeface = Typeface.DEFAULT_BOLD })
         col.addView(TextView(this).apply {
             text = "Reads Lalamove offers on this screen and scores them against your S$/hr target using live GPS. You still tap Accept yourself."
             setPadding(0, dp(4), 0, dp(12))

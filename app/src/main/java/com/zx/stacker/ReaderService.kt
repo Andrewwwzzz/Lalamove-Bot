@@ -81,6 +81,8 @@ class ReaderService : Service() {
     private val nearDrop = HashSet<String>()
     private var syncNote: String? = null
     private var lastLineCount = -1
+    private var frames = 0
+    private var frameError: String? = null
     private var blackFrame = false
     private var lastDump = 0L
 
@@ -233,12 +235,14 @@ class ReaderService : Service() {
         if (busy) return
         val img = try { reader?.acquireLatestImage() } catch (e: Exception) { null }
         if (img == null) { try { render() } catch (e: Throwable) { store.lastError = "Score: $e" }; return }   // screen unchanged: just re-score (GPS may have moved)
-        val bmp = try { toBitmap(img) } catch (e: Exception) { null } finally { img.close() }
+        frames++
+        val bmp = try { toBitmap(img) } catch (e: Throwable) { frameError = "frame: $e"; store.lastError = frameError; null } finally { img.close() }
         if (bmp == null) return
         blackFrame = isBlack(bmp)
         busy = true
         recognizer.process(InputImage.fromBitmap(bmp, 0))
             .addOnSuccessListener { try { handle(it) } catch (e: Throwable) { store.lastError = "Read: $e" } }
+            .addOnFailureListener { e -> frameError = "text reader: ${e.message}"; store.lastError = frameError }
             .addOnCompleteListener { busy = false; bmp.recycle() }
     }
 
@@ -259,16 +263,28 @@ class ReaderService : Service() {
         return bright < 5
     }
 
+    private var rowBuf: ByteArray? = null
+
+    /** Copies the frame row by row, so phones with padded rows or a short last row still work. */
     private fun toBitmap(img: Image): Bitmap {
         val plane = img.planes[0]
-        val pixelStride = plane.pixelStride
-        val rowPadding = plane.rowStride - pixelStride * img.width
-        val padded = Bitmap.createBitmap(img.width + rowPadding / pixelStride, img.height, Bitmap.Config.ARGB_8888)
-        padded.copyPixelsFromBuffer(plane.buffer)
-        if (rowPadding == 0) return padded
-        val cropped = Bitmap.createBitmap(padded, 0, 0, img.width, img.height)
-        padded.recycle()
-        return cropped
+        val w = img.width; val h = img.height
+        val ps = plane.pixelStride; val rs = plane.rowStride
+        val src = plane.buffer
+        val rowBytes = w * 4
+        val out = ByteArray(rowBytes * h).also { rowBuf = it }
+        for (y in 0 until h) {
+            val start = y * rs
+            if (start + (w - 1) * ps + 4 > src.limit()) break
+            if (ps == 4) {
+                src.position(start); src.get(out, y * rowBytes, rowBytes)
+            } else {
+                for (x in 0 until w) { src.position(start + x * ps); src.get(out, y * rowBytes + x * 4, 4) }
+            }
+        }
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        bmp.copyPixelsFromBuffer(java.nio.ByteBuffer.wrap(out))
+        return bmp
     }
 
     private fun handle(text: Text) {
@@ -379,9 +395,11 @@ class ReaderService : Service() {
         if (offers.isEmpty()) {
             val onBoard = current.size
             val diag = when {
+                frameError != null -> " · ⚠️ $frameError".take(90)
                 blackFrame -> " · ⚫ screen capture is black"
                 lastLineCount >= 0 -> " · read $lastLineCount lines"
-                else -> ""
+                frames == 0 -> " · no screen frames yet"
+                else -> " · $frames frames, reading…"
             }
             val note = syncNote ?: "Watching · no offers on screen$diag"
             val boardNet = if (onBoard > 0 && start != null)
