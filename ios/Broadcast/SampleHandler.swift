@@ -135,7 +135,7 @@ class SampleHandler: RPBroadcastSampleHandler {
             let title = "\(label) +\(money(s.netGain)) net · \(Int(s.perHour))/hr"
             let pool = (o.type != nil && o.type!.lowercased() != "regular") ? " · \(o.type!)" : ""
             let fareText = "Fare \(money(o.fare))" + (o.priority > 0 ? " + \(money(o.priority)) priority" : "")
-            let body = "\(o.pickup) → \(o.drop)\(pool)\n\(fareText) · Pickup \(one(s.pickupKm)) km (max \(one(s.maxPickupKm))) · min fare \(money(s.minFare))" +
+            let body = "\(o.pickup) → \(o.drop)\(pool)\n\(fareText) · Pickup \(one(s.pickupKm)) km (max \(one(s.maxPickupKm))) · needs fare ≥ \(money(s.minFare))" +
                 (drops.isEmpty ? "" : " · stacks with \(drops.count) on board") +
                 (s.spareMin.map { " · \(Int($0)) min spare for \(gl?.name ?? "goal")" } ?? "")
             post(id: o.key, title: title, body: body, sound: true)

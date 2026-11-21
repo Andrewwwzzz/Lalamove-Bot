@@ -46,7 +46,7 @@ object OfferParser {
     private val ID = Regex("""#\s?\d{6,}""")
     private val TIME = Regex("""\d{1,2}:\d{2}""")
     /** The round pickup icon / pin read as a letter in front of the name: "O Kovan", "0 Punggol". */
-    private val ICON_PREFIX = Regex("""^(?:[OoQ0○◯◦•·°@]|\(\))\s+(?=\p{Lu})""")
+    private val ICON_PREFIX = Regex("""^(?:[OoQ0PpGg9○◯◦•·°@📍]|\(\))\s+(?=\p{Lu})""")
 
     fun cleanPlace(s: String): String = s.replaceFirst(ICON_PREFIX, "")
 

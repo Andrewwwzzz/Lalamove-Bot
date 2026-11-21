@@ -40,8 +40,8 @@ enum OfferParser {
     private static let bonusRx = rx(#"\+\s?\$?\s?(\d{1,3}[.,]\d{1,2})"#)
     private static let idRx = rx(#"#\s?\d{6,}"#)
     private static let timeRx = rx(#"\d{1,2}:\d{2}"#)
-    /// The round pickup icon / pin read as a letter in front of the name: "O Kovan", "0 Punggol", "◦ Bugis".
-    private static let iconPrefixRx = rx(#"^(?:[OoQ0○◯◦•·°@]|\(\))\s+(?=\p{Lu})"#)
+    /// The pickup circle / drop pin icons read as a letter in front of the name: "O Kovan", "P Tampines", "0 Punggol".
+    private static let iconPrefixRx = rx(#"^(?:[OoQ0PpGg9○◯◦•·°@📍]|\(\))\s+(?=\p{Lu})"#)
 
     /// Removes an icon read as a character before a place name.
     static func cleanPlace(_ s: String) -> String {

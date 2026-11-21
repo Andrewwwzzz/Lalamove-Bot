@@ -438,7 +438,7 @@ class ReaderService : Service() {
                         val timeLine = s.spareMin?.let { if (it >= 0) " · ${it.toInt()} min spare" else "" } ?: ""
                         val txt = "$label  +${money(s.netGain)} net · ${s.perHour.toInt()}/hr\n" +
                             "$title · fare ${money(o.fare)}${if (o.priority > 0) " + ${money(o.priority)}" else ""}\n" +
-                            "pickup ${one(if (current.isEmpty() && o.pickupKm != null) o.pickupKm else s.pickupKm)} km (max ${one(s.maxPickupKm)}) · min fare ${money(s.minFare)}\n" +
+                            "pickup ${one(if (current.isEmpty() && o.pickupKm != null) o.pickupKm else s.pickupKm)} km (max ${one(s.maxPickupKm)}) · needs fare ≥ ${money(s.minFare)}\n" +
                             "+${one(s.extraKm)} km · +${s.extraMin.toInt()} min$timeLine"
                         if ((s.verdict == Verdict.TAKE || s.verdict == Verdict.OK) && alerted.add(o.key)) buzz()
                         if (o.bottom > o.top) when (s.verdict) {

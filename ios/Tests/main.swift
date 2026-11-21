@@ -23,7 +23,7 @@ check(offers.count > 2 && offers[2].extraStops == 2, "2 stops detected")
 check(offers.first?.extraStops == 0, "single stop detected")
 
 // Pickup icon read as a letter in front of the place
-let icons = OfferParser.parse([l("(~2.4 km) Pick Up Now", 100), l("Regular", 150), l("O Kovan", 200), l("0 Punggol", 250), l("S$14.20", 320, 900)])
+let icons = OfferParser.parse([l("(~2.4 km) Pick Up Now", 100), l("Regular", 150), l("O Kovan", 200), l("P Punggol", 250), l("S$14.20", 320, 900)])
 check(icons.first?.pickup == "Kovan" && icons.first?.drop == "Punggol", "strips icon letter: \(icons.first.map { $0.pickup + " → " + $0.drop } ?? "none")")
 
 // "+ x.xx": counts only on the fare's row
