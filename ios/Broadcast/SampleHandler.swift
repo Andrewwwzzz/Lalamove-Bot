@@ -21,6 +21,7 @@ class SampleHandler: RPBroadcastSampleHandler {
     private var geoPending = Set<String>()
     private let geocoder = CLGeocoder()
     private var lastStatus = ""
+    private var lastStatusAt = Date.distantPast
 
     private struct SavedOrder: Codable { let pickup: String; let drop: String; let fare: Double; let priority: Double; let saved: Date }
 
@@ -70,15 +71,21 @@ class SampleHandler: RPBroadcastSampleHandler {
         if OfferParser.isRecordScreen(lines) {
             // Record screen: Ongoing cards are YOUR jobs. Never score them as offers.
             if OfferParser.hasInProgress(lines) { sync(parsed) }
+            status("👀 Record screen · read \(lines.count) lines", "\(onBoard().count) order(s) on board")
             return
         }
-        guard !parsed.isEmpty else { return }
 
         let drops = onBoard().compactMap { resolve($0.drop) }
-        for o in parsed.prefix(5) where !notified.contains(o.key) {
-            guard let p = resolve(o.pickup), let d = resolve(o.drop) else { continue }  // looked up in background; next frame
+        var summary: [String] = []
+        for o in parsed.prefix(5) {
+            guard let p = resolve(o.pickup), let d = resolve(o.drop) else {   // looked up in background; next frame
+                summary.append("📍 locating \(o.pickup) → \(o.drop)"); continue
+            }
             let s = Scorer.score(pickup: p, drop: d, pickupKm: o.pickupKm ?? 3.0, fare: o.fare, priority: o.priority,
                                  onBoardDrops: drops, target: target)
+            let icon = s.verdict == .take ? "✅" : (s.verdict == .ok ? "🟡" : "⛔")
+            summary.append("\(icon) \(Int(s.perHour))/hr \(o.pickup) → \(o.drop) (\(money(o.fare)))")
+            if notified.contains(o.key) { continue }
             notified.insert(o.key)
             guard s.verdict != .skip else { continue }
             let label = s.verdict == .take ? "✅ TAKE" : "🟡 OK"
@@ -88,6 +95,16 @@ class SampleHandler: RPBroadcastSampleHandler {
                 (drops.isEmpty ? "" : " · stacks with \(drops.count) on board")
             post(id: o.key, title: title, body: body, sound: true)
         }
+        status("👀 Read \(lines.count) lines · \(parsed.count) offer\(parsed.count == 1 ? "" : "s")",
+               summary.isEmpty ? "No offers recognised on this screen." : summary.joined(separator: "\n"))
+    }
+
+    /// Silent entry in Notification Centre (no banner) showing what the reader sees. Updated at most every 10 s.
+    private func status(_ title: String, _ body: String) {
+        let key = title + body
+        guard key != lastStatus, Date().timeIntervalSince(lastStatusAt) >= 10 else { return }
+        lastStatus = key; lastStatusAt = Date()
+        post(id: "status", title: title, body: body)
     }
 
     /// Make "on board" match the Ongoing tab.
